@@ -38,6 +38,8 @@ router.post('/signup', (req, res, next) => {
                     User
                         .create(user)
                         .then(id => {
+                            setUserIdCookie(req, res, id);
+
                             res.json({
                                 id,
                                 message: 'unique user'
@@ -60,6 +62,15 @@ router.post('/signup', (req, res, next) => {
     
 });
 
+function setUserIdCookie(req, res, id) {
+    const isSecure = req.app.get('env') != 'development';
+    res.cookie('user_id', id, {
+        httpOnly: true,
+        secure: isSecure,
+        signed: true
+
+    });
+}
 
 router.post('/login', (req, res, next) => {
     // check to see if user is in database
@@ -67,30 +78,27 @@ router.post('/login', (req, res, next) => {
         User    
             .getOneByEmail(req.body.email)
             .then(user => {
-                const isSecure = req.app.get('env') != 'development';
-                console.log('user', user, {
-                    httpOnly: true,
-                    secure: isSecure,
-                    signed: true
-    
 
-                });
+
+               
                 if (user) {
                     // check password against hashed password
                     bcrypt
                         .compare(req.body.password, user.password)
                         .then((result) => {
-
+                            // if the passwords matched
                             if(result) {
                                 // set set-cookie header
-                                res.cookie('user_id', user.id)
+                                setUserIdCookie(req, res, user.id);
+ 
                                 res.json({
+                                    id: user.id,
                                     message: 'logged in'
                                   });
 
                             }
                             else {
-                                next(Error("Invalid login"));
+                                next(Error("Invalid login1"));
                             }
                            
                         
@@ -100,14 +108,25 @@ router.post('/login', (req, res, next) => {
                 }
 
                 else {
-                    next(Error("Invalid login"));
+                    next(Error("Invalid login2"));
                 }
               
 
     });
 }
     else {
-        next(new Error('Invalid login'));
+        next(new Error('Invalid login3'));
     }
 });
+
+
+router.get('/logout', (req, res) => {
+
+    res.clearCookie('user_id');
+    res.json({
+        message: 'you are logged out'
+    });
+});
+
+
 module.exports = router;
